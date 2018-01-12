@@ -2,6 +2,8 @@ const request = require('request');
 const fs = require('fs');
 const cheerio = require('cheerio');
 
+require('colors');
+
 // NOTE:
 // I chose the User-Agent value from http://www.browser-info.net/useragents
 // Not setting one causes Google search to not display results
@@ -25,7 +27,7 @@ function googleIt (config) {
         if (error) {
           return reject('Error making web request: ' + error, null);
         }
-        var results = getResults(body, config['no-display']);
+        const results = getResults(body, config['no-display']);
 
         if (output !== undefined) { //eslint-disable-line
           fs.writeFile(
@@ -47,23 +49,9 @@ function googleIt (config) {
 
 function getResults (data, noDisplay) {
   const $ = cheerio.load(data);
-  const results = [];
-
-  // result titles
-  const titles = $('div.rc > h3.r > a').contents();
-
-  titles.each((index, elem) => {
-    results.push({'title': elem.data});
-  });
-
-  // result links
-  $('div.rc > h3.r > a').map((index, elem) => {
-    if (index < results.length) {
-      results[index] = Object.assign(results[index], {
-        'link': elem.attribs.href
-      });
-    }
-  });
+  const results = $('div.rc > h3.r > a').map((i, element) => {
+    return {'title': $(element).html(), 'link': $(element).attr('href')};
+  }).get();
 
   // result snippets
   $('div.rc > div.s > div > span.st').map((index, elem) => {
