@@ -1,6 +1,7 @@
-const request = require('request');
-const fs = require('fs');
 const cheerio = require('cheerio');
+const fs = require('fs');
+const merge = require('lodash.merge');
+const request = require('request');
 
 require('colors');
 
@@ -23,8 +24,7 @@ function googleIt (config) {
   };
 
   return new Promise((resolve, reject) => {
-    request(
-      Object.assign({}, defaultOptions, options),
+    request(merge(defaultOptions, options),
       (error, response, body) => {
         if (error) {
           return reject('Error making web request: ' + error, null);
