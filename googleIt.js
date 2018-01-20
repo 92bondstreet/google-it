@@ -1,8 +1,11 @@
-const request = require('request');
-const fs = require('fs');
 const cheerio = require('cheerio');
+const fs = require('fs');
+const merge = require('lodash.merge');
+const request = require('request');
 
 require('colors');
+
+const STATUS = /^[2-3][0-9][0-9]$/;
 
 // NOTE:
 // I chose the User-Agent value from http://www.browser-info.net/useragents
@@ -21,12 +24,16 @@ function googleIt (config) {
   };
 
   return new Promise((resolve, reject) => {
-    request(
-      Object.assign({}, defaultOptions, options),
+    request(merge(defaultOptions, options),
       (error, response, body) => {
         if (error) {
           return reject('Error making web request: ' + error, null);
         }
+
+        if (! STATUS.test(response.statusCode)) {
+          return reject(`STATUS_4xx_5xx - ${response.statusMessage}`);
+        }
+
         const results = getResults(body, config['no-display']);
 
         if (output !== undefined) { //eslint-disable-line
@@ -41,6 +48,11 @@ function googleIt (config) {
             }
           );
         }
+
+        if (results.length === 0) {
+          return reject('NO_RESULT_FOUND');
+        }
+
         return resolve(results);
       }
     );

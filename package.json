@@ -2,7 +2,7 @@
   "name": "google-it",
   "version": "1.0.4",
   "description": "A command line utility to help retrieve, display, and store Google search results",
-  "main": "./app.js",
+  "main": "./googleIt.js",
   "bin": "./app.js",
   "repository": {
     "type": "git",
@@ -20,13 +20,14 @@
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
     "colors": "^1.1.2",
-    "command-line-args": "^4.0.7",
+    "command-line-args": "^5.0.1",
+    "lodash.merge": "^4.6.0",
     "ora": "^1.3.0",
     "request": "^2.81.0"
   },
   "devDependencies": {
-    "eslint": "^4.8.0",
-    "mocha": "^3.5.3",
+    "eslint": "^4.16.0",
+    "mocha": "^5.0.0",
     "prettier": "1.10.2"
   }
 }

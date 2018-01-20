@@ -3,7 +3,9 @@ const googleIt = require('./googleIt');
 async function sandbox () {
   try {
     const options = {
-      //'proxy': 'http://localhost:8118'
+      'headers': {
+        'cookies': 'CONSENT=YES+PT.fr+V7;'
+      }
     };
     const results = await googleIt({options, 'query': 'covfefe irony', 'no-display': true});
 
