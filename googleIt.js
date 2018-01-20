@@ -4,6 +4,8 @@ const cheerio = require('cheerio');
 
 require('colors');
 
+const STATUS = /^[2-3][0-9][0-9]$/;
+
 // NOTE:
 // I chose the User-Agent value from http://www.browser-info.net/useragents
 // Not setting one causes Google search to not display results
@@ -27,6 +29,11 @@ function googleIt (config) {
         if (error) {
           return reject('Error making web request: ' + error, null);
         }
+
+        if (! STATUS.test(response.statusCode)) {
+          return reject(`STATUS_4xx_5xx - ${response.statusMessage}`);
+        }
+
         const results = getResults(body, config['no-display']);
 
         if (output !== undefined) { //eslint-disable-line
@@ -41,6 +48,11 @@ function googleIt (config) {
             }
           );
         }
+
+        if (results.length === 0) {
+          return reject('NO_RESULT_FOUND');
+        }
+
         return resolve(results);
       }
     );
