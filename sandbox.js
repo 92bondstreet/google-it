@@ -2,12 +2,15 @@ const googleIt = require('./googleIt');
 
 async function sandbox () {
   try {
+    const query = 'covfefe irony';
     const options = {
+      'no-display': true,
       'headers': {
-        'cookies': 'CONSENT=YES+PT.fr+V7;'
-      }
+        'cookie': 'CONSENT=WP.2690f0.269181'
+      },
+      'proxy': 'localhost:8118'
     };
-    const results = await googleIt({options, 'query': 'covfefe irony', 'no-display': true});
+    const results = await googleIt(Object.assign({}, {query}, options));
 
     console.log(results);
   } catch (e) {
