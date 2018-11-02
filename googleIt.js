@@ -111,8 +111,8 @@ const googleIt = configuration => {
 
 function getResults (data, noDisplay) {
   const $ = cheerio.load(data);
-  const results = $('div.rc > h3.r > a').map((i, element) => {
-    return {'title': $(element).html(), 'link': $(element).attr('href')};
+  const results = $('div.rc > div.r').map((i, element) => {
+    return {'title': $(element).find('h3').html(), 'link': $(element).find('a').attr('href')};
   }).get();
 
   // result snippets
