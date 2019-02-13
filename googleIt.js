@@ -9,6 +9,7 @@ require('superagent-proxy')(request);
 
 const GOOGLE_DEFAULT_RESULTS = 10;
 const GOOGLE_LIMIT_RESULTS = 100;
+const HIGHLIGHT_TAG = 'mark';
 const RANDOM_USER_AGENT = randomUseragent.getRandom(ua => ua.osName === 'Mac OS' && ua.browserName === 'Chrome' && parseFloat(ua.browserVersion) >= 50);
 const STATUS = /^[2-3][0-9][0-9]$/;
 const TIMEOUT = 30000;
@@ -43,7 +44,7 @@ const formatError = (reason, response) => {
 // Not setting one causes Google search to not display results
 
 const googleIt = configuration => {
-  const {headers, limit = GOOGLE_DEFAULT_RESULTS, output, proxy, query} = configuration;
+  const {headers, highlight = HIGHLIGHT_TAG, limit = GOOGLE_DEFAULT_RESULTS, output, proxy, query} = configuration;
   const num = limit > GOOGLE_LIMIT_RESULTS ? GOOGLE_LIMIT_RESULTS : limit;
   let message = '';
   let rqst;
@@ -78,7 +79,7 @@ const googleIt = configuration => {
         return reject(message);
       }
 
-      const results = getResults(res.text, configuration['no-display']);
+      const results = getResults(res.text, configuration['no-display'], highlight);
 
       if (output !== undefined) { //eslint-disable-line
         fs.writeFile(
@@ -121,7 +122,7 @@ const googleIt = configuration => {
  * @param  {Boolean} noDisplay
  * @return {Array}
  */
-function getResults (data, noDisplay) {
+function getResults (data, noDisplay, highlight) {
   const $ = cheerio.load(data);
   const results = $('div.rc > div.r').map((i, element) => {
     return {'title': $(element).find('h3').text(), 'link': $(element).find('a').attr('href')};
@@ -130,10 +131,15 @@ function getResults (data, noDisplay) {
   // result snippets
   $('div.rc > div.s > div > span.st').map((index, elem) => {
     if (index < results.length) {
+      // replace em tag with a custom hightlight tag
+      $(elem).find('em').each((i, item) => {
+        item.tagName = highlight;
+      });
+
       const snippet = $(elem).text();
       const html = $(elem).html();
 
-      results[index] = Object.assign(results[index], {html, snippet});
+      results[index] = Object.assign(results[index], {html, snippet, 'rank': index});
     }
   });
 
