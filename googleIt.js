@@ -7,6 +7,8 @@ const request = require('superagent');
 require('colors');
 require('superagent-proxy')(request);
 
+const GOOGLE_DEFAULT_RESULTS = 10;
+const GOOGLE_LIMIT_RESULTS = 100;
 const RANDOM_USER_AGENT = randomUseragent.getRandom(ua => ua.osName === 'Mac OS' && ua.browserName === 'Chrome' && parseFloat(ua.browserVersion) >= 50);
 const STATUS = /^[2-3][0-9][0-9]$/;
 const TIMEOUT = 30000;
@@ -41,7 +43,8 @@ const formatError = (reason, response) => {
 // Not setting one causes Google search to not display results
 
 const googleIt = configuration => {
-  const {headers, output, proxy, query} = configuration;
+  const {headers, limit = GOOGLE_DEFAULT_RESULTS, output, proxy, query} = configuration;
+  const num = limit > GOOGLE_LIMIT_RESULTS ? GOOGLE_LIMIT_RESULTS : limit;
   let message = '';
   let rqst;
 
@@ -54,9 +57,9 @@ const googleIt = configuration => {
     rqst = request.agent()
       .get('https://www.google.com/search')
       .query({
+        num,
         'q': query,
-        'gws_rd': 'ss',
-        'num': 10
+        'gws_rd': 'ss'
       })
       .set(merge(HEADERS, headers))
       .timeout(TIMEOUT);
