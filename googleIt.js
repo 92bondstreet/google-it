@@ -118,16 +118,10 @@ function getResults (data, noDisplay) {
   // result snippets
   $('div.rc > div.s > div > span.st').map((index, elem) => {
     if (index < results.length) {
-      var snippet = elem.children
-        .map(child => {
-          if (child.data === null) {
-            return child.children.map(c => c.data);
-          }
-          return child.data;
-        })
-        .join('');
+      const snippet = $(elem).text();
+      const html = $(elem).html();
 
-      results[index] = Object.assign(results[index], {'snippet': snippet});
+      results[index] = Object.assign(results[index], {html, snippet});
     }
   });
 
