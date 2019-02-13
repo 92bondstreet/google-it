@@ -48,7 +48,7 @@ const googleIt = configuration => {
   let message = '';
   let rqst;
 
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const timer = setTimeout(() => {
       rqst.abort();
       reject('STRICT_TIMEOUT');
@@ -68,50 +68,59 @@ const googleIt = configuration => {
       rqst = rqst.proxy(`http://${proxy}`);
     }
 
-    rqst
-      .end((err, res) => {
-        clearTimeout(timer);
-        if (err) {
-          message = formatError('UNTRACKED_ERROR', err);
+    try {
+      const res = await rqst;
 
-          if (err.status === 404) {
-            message = 'PAGE_NOT_FOUND';
-          } else if (res && ! STATUS.test(res.status)) {
-            message = formatError('STATUS_4xx_5xx', res);
-          }
+      clearTimeout(timer);
 
-          return reject(message);
-        }
+      if (! STATUS.test(res.status)) {
+        message = formatError('STATUS_4xx_5xx', res);
+        return reject(message);
+      }
 
-        if (! STATUS.test(res.status)) {
-          message = formatError('STATUS_4xx_5xx', res);
-          return reject(message);
-        }
+      const results = getResults(res.text, configuration['no-display']);
 
-        const results = getResults(res.text, configuration['no-display']);
-
-        if (output !== undefined) { //eslint-disable-line
-          fs.writeFile(
-            output,
-            JSON.stringify(results, null, 2),
-            'utf8',
-            error => {
-              if (error) {
-                console.err('Error writing to file ' + output + ': ' + error);
-              }
+      if (output !== undefined) { //eslint-disable-line
+        fs.writeFile(
+          output,
+          JSON.stringify(results, null, 2),
+          'utf8',
+          error => {
+            if (error) {
+              console.err('Error writing to file ' + output + ': ' + error);
             }
-          );
-        }
+          }
+        );
+      }
 
-        if (results.length === 0) {
-          return reject('NO_RESULT_FOUND');
-        }
+      if (results.length === 0) {
+        return reject('NO_RESULT_FOUND');
+      }
 
-        return resolve(results);
-      });
+      return resolve(results);
+    } catch (err) {
+      clearTimeout(timer);
+      const {response} = err;
+
+      message = formatError('UNTRACKED_ERROR', err);
+
+      if (err.status === 404) {
+        message = 'PAGE_NOT_FOUND';
+      } else if (response && ! STATUS.test(response.status)) {
+        message = formatError('STATUS_4xx_5xx', response);
+      }
+
+      return reject(message);
+    }
   });
 };
 
+/**
+ * Decode the google dom results
+ * @param  {Object} data
+ * @param  {Boolean} noDisplay
+ * @return {Array}
+ */
 function getResults (data, noDisplay) {
   const $ = cheerio.load(data);
   const results = $('div.rc > div.r').map((i, element) => {
