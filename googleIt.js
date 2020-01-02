@@ -1,7 +1,6 @@
 const {curly} = require('node-libcurl');
 const cheerio = require('cheerio');
 const fs = require('fs');
-const merge = require('lodash.merge');
 const UserAgent = require('user-agents');
 
 require('colors');
@@ -10,7 +9,6 @@ const GOOGLE_DEFAULT_RESULTS = 10;
 const GOOGLE_LIMIT_RESULTS = 100;
 const HIGHLIGHT_TAG = 'mark';
 const STATUS = /^[2-3][0-9][0-9]$/;
-const TIMEOUT = 30000;
 const HEADERS = {
   'accept': '*/*',
   'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
@@ -23,7 +21,7 @@ const HEADERS = {
   'upgrade-insecure-requests': '1',
   'x-client-data': 'CIu2yQEIpbbJAQjEtskBCKmdygEIvLDKAQj3tMoBCJi1ygEI7LXKARirpMoBGNWxygE='
 };
-const ua = new UserAgent();
+const ua = new UserAgent({'deviceCategory': 'desktop'});
 
 const googleIt = async configuration => {
   const {headers, highlight = HIGHLIGHT_TAG, limit = GOOGLE_DEFAULT_RESULTS, output, proxy, query} = configuration;
@@ -51,7 +49,7 @@ const googleIt = async configuration => {
 
     if (! STATUS.test(statusCode)) {
       console.error(statusCode);
-      return Promise.reject(data);
+      return Promise.reject(statusCode);
     }
 
     const results = getResults(data, configuration['no-display'], highlight);
@@ -70,7 +68,7 @@ const googleIt = async configuration => {
     }
 
     if (results.length === 0) {
-      return Promise.reject('NO_RESULT_FOUND');
+      return Promise.reject(`NO_RESULT_FOUND | ${statusCode}`);
     }
     return Promise.resolve(results);
   } catch (error) {
