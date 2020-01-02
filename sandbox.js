@@ -1,11 +1,11 @@
 const googleIt = require('./googleIt');
 
-async function sandbox () {
+async function sandbox (proxy) {
   try {
     const query = 'covfefe irony';
     const options = {
+      proxy,
       'no-display': true,
-      'proxy': 'localhost:8118',
       'limit': 150
     };
     const results = await googleIt(Object.assign({}, {query}, options));
@@ -17,4 +17,6 @@ async function sandbox () {
   }
 }
 
-sandbox();
+const [,, proxy] = process.argv;
+
+sandbox(proxy);

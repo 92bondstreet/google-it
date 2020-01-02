@@ -1,119 +1,82 @@
+const {curly} = require('node-libcurl');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const merge = require('lodash.merge');
-const randomUseragent = require('random-useragent');
-const request = require('superagent');
+const UserAgent = require('user-agents');
 
 require('colors');
-require('superagent-proxy')(request);
 
 const GOOGLE_DEFAULT_RESULTS = 10;
 const GOOGLE_LIMIT_RESULTS = 100;
 const HIGHLIGHT_TAG = 'mark';
-const RANDOM_USER_AGENT = randomUseragent.getRandom(ua => ua.osName === 'Mac OS' && ua.browserName === 'Chrome' && parseFloat(ua.browserVersion) >= 50);
 const STATUS = /^[2-3][0-9][0-9]$/;
 const TIMEOUT = 30000;
 const HEADERS = {
-  'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'accept': '*/*',
   'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-  'authority': 'www.google.fr',
+  'authority': 'www.google.com',
   'cache-control': 'no-cache',
-  'cookie': 'SID=fakesidforproxy',
   'pragma': 'no-cache',
+  'sec-fetch-mode': 'navigate',
+  'sec-fetch-site': 'same-origin',
+  'sec-fetch-user': '?1',
   'upgrade-insecure-requests': '1',
-  'user-agent': RANDOM_USER_AGENT,
-  'x-chrome-uma-enabled': 1
+  'x-client-data': 'CIu2yQEIpbbJAQjEtskBCKmdygEIvLDKAQj3tMoBCJi1ygEI7LXKARirpMoBGNWxygE='
 };
+const ua = new UserAgent();
 
-/**
- * Format superagent error for better logging
- * @param  {String} reason
- * @param  {Object} response
- * @return {String}
- */
-const formatError = (reason, response) => {
-  const splitMessage = response.message ? response.message.split('\n') : [response.error];
-  const message = splitMessage[splitMessage.length - 1];
-  const status = response.status || response.type || response.name;
-
-  return `${reason} - ${status} - ${message}`;
-};
-
-// NOTE:
-// I chose the User-Agent value from http://www.browser-info.net/useragents
-// Not setting one causes Google search to not display results
-
-const googleIt = configuration => {
+const googleIt = async configuration => {
   const {headers, highlight = HIGHLIGHT_TAG, limit = GOOGLE_DEFAULT_RESULTS, output, proxy, query} = configuration;
   const num = limit > GOOGLE_LIMIT_RESULTS ? GOOGLE_LIMIT_RESULTS : limit;
-  let message = '';
-  let rqst;
 
-  return new Promise(async (resolve, reject) => {
-    const timer = setTimeout(() => {
-      rqst.abort();
-      reject('STRICT_TIMEOUT');
-    }, TIMEOUT);
+  try {
+    const url = new URL('https://www.google.com/search');
+    const raiders = {...headers, ...HEADERS, 'User-Agent': ua.random().toString()};
+    const HTTPHEADER = Object.entries(raiders).map(([key, value]) => `${key}: ${value}`);
+    const params = {
+      num,
+      'q': query,
+      'gws_rd': 'ss'
+    };
 
-    rqst = request.agent()
-      .get('https://www.google.com/search')
-      .query({
-        num,
-        'q': query,
-        'gws_rd': 'ss'
-      })
-      .set(merge(HEADERS, headers))
-      .timeout(TIMEOUT);
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+    const options = {HTTPHEADER};
 
     if (proxy) {
-      rqst = rqst.proxy(`http://${proxy}`);
+      options.PROXY = proxy;
     }
 
-    try {
-      const res = await rqst;
+    const {data, statusCode} = await curly.get(url.href, options);
 
-      clearTimeout(timer);
+    if (! STATUS.test(statusCode)) {
+      console.error(statusCode);
+      return Promise.reject(data);
+    }
 
-      if (! STATUS.test(res.status)) {
-        message = formatError('STATUS_4xx_5xx', res);
-        return reject(message);
-      }
+    const results = getResults(data, configuration['no-display'], highlight);
 
-      const results = getResults(res.text, configuration['no-display'], highlight);
-
-      if (output !== undefined) { //eslint-disable-line
-        fs.writeFile(
-          output,
-          JSON.stringify(results, null, 2),
-          'utf8',
-          error => {
-            if (error) {
-              console.err('Error writing to file ' + output + ': ' + error);
-            }
+    if (output !== undefined) { //eslint-disable-line
+      fs.writeFile(
+        output,
+        JSON.stringify(results, null, 2),
+        'utf8',
+        error => {
+          if (error) {
+            console.err('Error writing to file ' + output + ': ' + error);
           }
-        );
-      }
-
-      if (results.length === 0) {
-        return reject('NO_RESULT_FOUND');
-      }
-
-      return resolve(results);
-    } catch (err) {
-      clearTimeout(timer);
-      const {response} = err;
-
-      message = formatError('UNTRACKED_ERROR', err);
-
-      if (err.status === 404) {
-        message = 'PAGE_NOT_FOUND';
-      } else if (response && ! STATUS.test(response.status)) {
-        message = formatError('STATUS_4xx_5xx', response);
-      }
-
-      return reject(message);
+        }
+      );
     }
-  });
+
+    if (results.length === 0) {
+      return Promise.reject('NO_RESULT_FOUND');
+    }
+    return Promise.resolve(results);
+  } catch (error) {
+    console.error(error);
+    return Promise.reject(error);
+  }
 };
 
 /**
