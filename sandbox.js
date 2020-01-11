@@ -1,9 +1,10 @@
 const googleIt = require('./googleIt');
 
-async function sandbox (proxy) {
+async function sandbox (proxy, cookie) {
   try {
     const query = 'covfefe irony';
     const options = {
+      cookie,
       proxy,
       'no-display': true,
       'limit': 150
@@ -17,6 +18,6 @@ async function sandbox (proxy) {
   }
 }
 
-const [,, proxy] = process.argv;
+const [,, proxy, cookie] = process.argv;
 
-sandbox(proxy);
+sandbox(proxy, cookie);

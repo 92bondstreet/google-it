@@ -24,7 +24,7 @@ const HEADERS = {
 const ua = new UserAgent({'deviceCategory': 'desktop'});
 
 const googleIt = async configuration => {
-  const {headers, highlight = HIGHLIGHT_TAG, limit = GOOGLE_DEFAULT_RESULTS, output, proxy, query} = configuration;
+  const {cookie, headers, highlight = HIGHLIGHT_TAG, limit = GOOGLE_DEFAULT_RESULTS, output, proxy, query} = configuration;
   const num = limit > GOOGLE_LIMIT_RESULTS ? GOOGLE_LIMIT_RESULTS : limit;
 
   try {
@@ -43,6 +43,10 @@ const googleIt = async configuration => {
 
     if (proxy) {
       options.PROXY = proxy;
+    }
+
+    if (cookie) {
+      options.COOKIE = cookie;
     }
 
     const {data, statusCode} = await curly.get(url.href, options);
