@@ -7,7 +7,7 @@ async function sandbox (proxy, cookie) {
       cookie,
       proxy,
       'no-display': true,
-      'limit': 150
+      'limit': 75
     };
     const results = await googleIt(Object.assign({}, {query}, options));
 

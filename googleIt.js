@@ -19,25 +19,42 @@ const HEADERS = {
   'sec-fetch-site': 'same-origin',
   'sec-fetch-user': '?1',
   'upgrade-insecure-requests': '1',
-  'x-client-data': 'CIu2yQEIpbbJAQjEtskBCKmdygEIvLDKAQj3tMoBCJi1ygEI7LXKARirpMoBGNWxygE='
+  'x-client-data':
+    'CIu2yQEIpbbJAQjEtskBCKmdygEIvLDKAQj3tMoBCJi1ygEI7LXKARirpMoBGNWxygE='
 };
 const ua = new UserAgent({'deviceCategory': 'desktop'});
 
 const googleIt = async configuration => {
-  const {cookie, headers, highlight = HIGHLIGHT_TAG, limit = GOOGLE_DEFAULT_RESULTS, output, proxy, query} = configuration;
+  const {
+    cookie,
+    headers,
+    highlight = HIGHLIGHT_TAG,
+    limit = GOOGLE_DEFAULT_RESULTS,
+    output,
+    proxy,
+    query
+  } = configuration;
   const num = limit > GOOGLE_LIMIT_RESULTS ? GOOGLE_LIMIT_RESULTS : limit;
 
   try {
     const url = new URL('https://www.google.com/search');
-    const raiders = {...headers, ...HEADERS, 'User-Agent': ua.random().toString()};
-    const HTTPHEADER = Object.entries(raiders).map(([key, value]) => `${key}: ${value}`);
+    const raiders = {
+      ...headers,
+      ...HEADERS,
+      'User-Agent': ua.random().toString()
+    };
+    const HTTPHEADER = Object.entries(raiders).map(
+      ([key, value]) => `${key}: ${value}`
+    );
     const params = {
       num,
       'q': query,
       'gws_rd': 'ss'
     };
 
-    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+    Object.keys(params).forEach(key =>
+      url.searchParams.append(key, params[key])
+    );
 
     const options = {HTTPHEADER};
 
@@ -58,17 +75,13 @@ const googleIt = async configuration => {
 
     const results = getResults(data, configuration['no-display'], highlight);
 
-    if (output !== undefined) { //eslint-disable-line
-      fs.writeFile(
-        output,
-        JSON.stringify(results, null, 2),
-        'utf8',
-        error => {
-          if (error) {
-            console.err('Error writing to file ' + output + ': ' + error);
-          }
+    if (output !== undefined) {
+      //eslint-disable-line
+      fs.writeFile(output, JSON.stringify(results, null, 2), 'utf8', error => {
+        if (error) {
+          console.err('Error writing to file ' + output + ': ' + error);
         }
-      );
+      });
     }
 
     if (results.length === 0) {
@@ -89,22 +102,43 @@ const googleIt = async configuration => {
  */
 function getResults (data, noDisplay, highlight) {
   const $ = cheerio.load(data);
-  const results = $('div.rc > div.r').map((i, element) => {
-    return {'title': $(element).find('h3').text(), 'link': $(element).find('a').attr('href')};
-  }).get();
 
-  // result snippets
-  $('div.rc > div.s > div > span.st').map((index, elem) => {
+  // Steps 0: create results based on title
+  const titles = $('div.rc > div:nth-child(1) > a > h3').contents();
+  const results = titles
+    .map((index, elem) => {
+      if (elem.data) {
+        return {'title': elem.data, 'rank': index};
+      }
+      return {'title': elem.children[0].data, 'rank': index};
+    })
+    .get();
+
+  // then link and snippet
+  $('div.rc > div:nth-child(1) > a').each((index, elem) => {
+    if (index < results.length) {
+      results[index] = Object.assign(results[index], {
+        'link': elem.attribs.href
+      });
+    }
+  });
+
+  $('div.rc > div:nth-child(2) > div > span').each((index, elem) => {
     if (index < results.length) {
       // replace em tag with a custom hightlight tag
-      $(elem).find('em').each((i, item) => {
-        item.tagName = highlight;
-      });
+      $(elem)
+        .find('em')
+        .each((i, item) => {
+          item.tagName = highlight;
+        });
 
       const snippet = $(elem).text();
       const html = $(elem).html();
 
-      results[index] = Object.assign(results[index], {html, snippet, 'rank': index});
+      results[index] = Object.assign(results[index], {
+        snippet,
+        html
+      });
     }
   });
 
